@@ -24,7 +24,13 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
     const user = await User.findById(req.user.id);
 
     let imageUrl = null;
+
     if (req.file) {
+      // Validate file type
+      if (!req.file.mimetype.startsWith('image/')) {
+        return res.status(400).json({ msg: 'Only image files are allowed' });
+      }
+
       const streamUpload = (reqFile) => {
         return new Promise((resolve, reject) => {
           const stream = cloudinary.uploader.upload_stream(
@@ -37,8 +43,14 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
           streamifier.createReadStream(reqFile.buffer).pipe(stream);
         });
       };
-      const result = await streamUpload(req.file);
-      imageUrl = result.secure_url;
+
+      try {
+        const result = await streamUpload(req.file);
+        imageUrl = result.secure_url;
+      } catch (uploadError) {
+        console.error('Cloudinary upload error:', uploadError);
+        return res.status(500).json({ msg: 'Image upload failed' });
+      }
     }
 
     const newPost = new Post({
@@ -49,7 +61,7 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
 
     const post = await newPost.save();
 
-    // Correct populate for document
+    // Populate user and comments
     await post.populate([
       { path: 'user', select: 'name avatar' },
       { path: 'comments.user', select: 'name avatar' },
@@ -57,7 +69,7 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
 
     res.json(post);
   } catch (err) {
-    console.error(err);
+    console.error('Create post error:', err);
     res.status(500).send('Server error');
   }
 });
@@ -71,7 +83,7 @@ router.get('/', async (req, res) => {
       .sort({ createdAt: -1 });
     res.json(posts);
   } catch (err) {
-    console.error(err);
+    console.error('Get posts error:', err);
     res.status(500).send('Server error');
   }
 });
@@ -94,7 +106,7 @@ router.put('/:id', auth, async (req, res) => {
 
     res.json(post);
   } catch (err) {
-    console.error(err);
+    console.error('Edit post error:', err);
     res.status(500).send('Server error');
   }
 });
@@ -110,7 +122,7 @@ router.delete('/:id', auth, async (req, res) => {
     await post.deleteOne();
     res.json({ msg: 'Post removed' });
   } catch (err) {
-    console.error(err);
+    console.error('Delete post error:', err);
     res.status(500).send('Server error');
   }
 });
@@ -137,7 +149,7 @@ router.put('/like/:id', auth, async (req, res) => {
 
     res.json(post);
   } catch (err) {
-    console.error(err);
+    console.error('Like/unlike post error:', err);
     res.status(500).send('Server error');
   }
 });
@@ -156,7 +168,7 @@ router.post('/comment/:id', auth, async (req, res) => {
 
     res.json(post);
   } catch (err) {
-    console.error(err);
+    console.error('Add comment error:', err);
     res.status(500).send('Server error');
   }
 });
