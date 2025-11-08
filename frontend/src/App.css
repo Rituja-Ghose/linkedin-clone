@@ -1,0 +1,9 @@
+
+
+/* Ensure the body takes full width and has no default padding */
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
