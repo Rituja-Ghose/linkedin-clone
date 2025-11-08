@@ -11,19 +11,21 @@ const app = express();
 
 // ====== CORS CONFIG ======
 const allowedOrigins = [
-  'http://localhost:5173',        // Vite dev server
-  process.env.FRONTEND_URL        // Vercel frontend from .env
+  'http://localhost:5173',                  // Vite dev server
+  process.env.FRONTEND_URL || ''            // Vercel frontend from .env
 ];
 
 app.use(cors({
   origin: function(origin, callback) {
-    if (!origin) return callback(null, true); // allow requests like Postman
+    if (!origin) return callback(null, true); // allow Postman, server-to-server
     if (allowedOrigins.indexOf(origin) === -1) {
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
       return callback(new Error(msg), false);
     }
     return callback(null, true);
   },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],  // allow OPTIONS
+  allowedHeaders: ['Content-Type', 'Authorization'],     // allow JWT headers
   credentials: true
 }));
 
